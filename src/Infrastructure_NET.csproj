@@ -137,6 +137,27 @@
       <EmbeddedResource Include="Emulator/Cores/bin/$(Configuration)/lib/translate-sparc-be.so">
         <LogicalName>Antmicro.Renode.translate-sparc-be.so</LogicalName>
       </EmbeddedResource>
+      <EmbeddedResource Include="Emulator/Cores/bin/$(Configuration)/lib/translate-avr-le.so">
+        <LogicalName>Antmicro.Renode.translate-avr-le.so</LogicalName>
+      </EmbeddedResource>
+      <EmbeddedResource Include="Emulator/Cores/bin/$(Configuration)/lib/translate-stm8-le.so">
+        <LogicalName>Antmicro.Renode.translate-stm8-le.so</LogicalName>
+      </EmbeddedResource>
+      <EmbeddedResource Include="Emulator/Cores/bin/$(Configuration)/lib/translate-mcs51-le.so">
+        <LogicalName>Antmicro.Renode.translate-mcs51-le.so</LogicalName>
+      </EmbeddedResource>
+      <EmbeddedResource Include="Emulator/Cores/bin/$(Configuration)/lib/translate-pic16-le.so">
+        <LogicalName>Antmicro.Renode.translate-pic16-le.so</LogicalName>
+      </EmbeddedResource>
+      <EmbeddedResource Include="Emulator/Cores/bin/$(Configuration)/lib/translate-pic18-le.so">
+        <LogicalName>Antmicro.Renode.translate-pic18-le.so</LogicalName>
+      </EmbeddedResource>
+      <EmbeddedResource Include="Emulator/Cores/bin/$(Configuration)/lib/translate-c2000-le.so">
+        <LogicalName>Antmicro.Renode.translate-c2000-le.so</LogicalName>
+      </EmbeddedResource>
+      <EmbeddedResource Include="Emulator/Cores/bin/$(Configuration)/lib/translate-dspic33-le.so">
+        <LogicalName>Antmicro.Renode.translate-dspic33-le.so</LogicalName>
+      </EmbeddedResource>
       <EmbeddedResource Include="Emulator/Cores/bin/$(Configuration)/lib/kvm-x86.so" Condition="$(CurrentPlatform) == 'Linux' And $(Architecture) == 'i386'">
         <LogicalName>Antmicro.Renode.kvm-x86.so</LogicalName>
       </EmbeddedResource>

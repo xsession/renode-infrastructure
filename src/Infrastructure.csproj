@@ -78,6 +78,27 @@
       <EmbeddedResource Include="Emulator/Cores/bin/$(Configuration)/lib/translate-sparc-be.so">
           <LogicalName>Antmicro.Renode.translate-sparc-be.so</LogicalName>
       </EmbeddedResource>
+      <EmbeddedResource Include="Emulator/Cores/bin/$(Configuration)/lib/translate-dspic33-le.so">
+        <LogicalName>Antmicro.Renode.translate-dspic33-le.so</LogicalName>
+      </EmbeddedResource>
+      <EmbeddedResource Include="Emulator/Cores/bin/$(Configuration)/lib/translate-c2000-le.so">
+        <LogicalName>Antmicro.Renode.translate-c2000-le.so</LogicalName>
+      </EmbeddedResource>
+      <EmbeddedResource Include="Emulator/Cores/bin/$(Configuration)/lib/translate-avr-le.so">
+        <LogicalName>Antmicro.Renode.translate-avr-le.so</LogicalName>
+      </EmbeddedResource>
+      <EmbeddedResource Include="Emulator/Cores/bin/$(Configuration)/lib/translate-stm8-le.so">
+        <LogicalName>Antmicro.Renode.translate-stm8-le.so</LogicalName>
+      </EmbeddedResource>
+      <EmbeddedResource Include="Emulator/Cores/bin/$(Configuration)/lib/translate-pic16-le.so">
+        <LogicalName>Antmicro.Renode.translate-pic16-le.so</LogicalName>
+      </EmbeddedResource>
+      <EmbeddedResource Include="Emulator/Cores/bin/$(Configuration)/lib/translate-pic18-le.so">
+        <LogicalName>Antmicro.Renode.translate-pic18-le.so</LogicalName>
+      </EmbeddedResource>
+      <EmbeddedResource Include="Emulator/Cores/bin/$(Configuration)/lib/translate-mcs51-le.so">
+        <LogicalName>Antmicro.Renode.translate-mcs51-le.so</LogicalName>
+      </EmbeddedResource>
       <EmbeddedResource Include="Emulator/Cores/bin/$(Configuration)/lib/translate-riscv-le.so">
         <LogicalName>Antmicro.Renode.translate-riscv-le.so</LogicalName>
       </EmbeddedResource>
@@ -364,6 +385,90 @@
     <None Include="Emulator/Cores/Sparc/SparcRegisters.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>SparcRegisters.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Emulator/Cores/dsPIC33/dsPIC33.cs" />
+    <Compile Include="Emulator/Cores/dsPIC33/dsPIC33Registers.cs">
+      <DependentUpon>dsPIC33Registers.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Emulator/Cores/dsPIC33/dsPIC33Registers.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>dsPIC33Registers.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Emulator/Cores/C2000/C2000.cs" />
+    <Compile Include="Emulator/Cores/C2000/C2000Registers.cs">
+      <DependentUpon>C2000Registers.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Emulator/Cores/C2000/C2000Registers.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>C2000Registers.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Emulator/Cores/AVR/AVR.cs" />
+    <Compile Include="Emulator/Cores/AVR/AVRRegisters.cs">
+      <DependentUpon>AVRRegisters.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Emulator/Cores/AVR/AVRRegisters.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>AVRRegisters.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Emulator/Cores/STM8/STM8.cs" />
+    <Compile Include="Emulator/Cores/STM8/STM8Registers.cs">
+      <DependentUpon>STM8Registers.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Emulator/Cores/STM8/STM8Registers.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>STM8Registers.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Emulator/Cores/PIC16/PIC16.cs" />
+    <Compile Include="Emulator/Cores/PIC16/PIC16Registers.cs">
+      <DependentUpon>PIC16Registers.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Emulator/Cores/PIC16/PIC16Registers.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>PIC16Registers.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Emulator/Cores/PIC18/PIC18.cs" />
+    <Compile Include="Emulator/Cores/PIC18/PIC18Registers.cs">
+      <DependentUpon>PIC18Registers.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Emulator/Cores/PIC18/PIC18Registers.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>PIC18Registers.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Emulator/Cores/MCS51/MCS51.cs" />
+    <Compile Include="Emulator/Cores/MCS51/MCS51Registers.cs">
+      <DependentUpon>MCS51Registers.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Emulator/Cores/MCS51/MCS51Registers.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>MCS51Registers.cs</LastGenOutput>
     </None>
   </ItemGroup>
   <ItemGroup>
