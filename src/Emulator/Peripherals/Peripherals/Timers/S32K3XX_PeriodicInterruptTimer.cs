@@ -83,9 +83,9 @@ namespace Antmicro.Renode.Peripherals.Timers
                         {
                             var channel0 = clockChannels[Registers.Control0];
                             var channel1 = clockChannels[Registers.Control1];
-                            var lifetimerValue = ulong.MaxValue - ((channel1.Value << 32) | channel0.Value);
+                            var lifetimerValue = ulong.MaxValue - ((channel0.Value << 32) | channel1.Value);
 
-                            lowerLifetimerValue.Value = (uint)lifetimerValue;
+                            lowerLifetimerValue.Value = lifetimerValue;
                             return lifetimerValue >> 32;
                         })
                 ;

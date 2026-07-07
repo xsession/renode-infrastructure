@@ -840,14 +840,6 @@ namespace Antmicro.Renode.Utilities
                 return true;
             }
 
-            // If BaseDirectory is empty (e.g. when hosted as a native library), fall back to
-            // the physical location of this assembly on disk.
-            var assemblyLocation = Path.GetDirectoryName(typeof(Misc).Assembly.Location);
-            if(!string.IsNullOrEmpty(assemblyLocation) && TryGetRootDirectory(assemblyLocation, out directory))
-            {
-                return true;
-            }
-
             // If we couldn't find root directory in previous step, try again
             // starting from directory of main process' executable. This is fallback for
             // when Renode was executed from self-contained binary.
@@ -947,24 +939,6 @@ namespace Antmicro.Renode.Utilities
             }
             outputFileFullPath = CopyToFile(libraryStream, libraryFile);
             return true;
-        }
-
-        public static bool TryCopyToTemporaryFile(string inputFile, out string temporaryFileFullPath, string temporaryFileSuffix = null)
-        {
-            temporaryFileFullPath = TemporaryFilesManager.Instance.GetTemporaryFile(temporaryFileSuffix);
-            try
-            {
-                using(var inputFileStream = new FileStream(inputFile, FileMode.Open, FileAccess.Read, FileShare.None))
-                {
-                    CopyToFile(inputFileStream, temporaryFileFullPath);
-                }
-                return true;
-            }
-            catch
-            {
-                temporaryFileFullPath = null;
-                return false;
-            }
         }
 
         public static ulong GrayToBinary(ulong grayEncoding)

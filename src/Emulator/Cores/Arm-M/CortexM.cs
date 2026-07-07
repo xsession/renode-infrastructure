@@ -25,13 +25,11 @@ namespace Antmicro.Renode.Peripherals.CPU
     public partial class CortexM : Arm, IPeripheralWithTransactionState
     {
         public CortexM(string cpuType, IMachine machine, NVIC nvic, [NameAlias("id")] uint cpuId = 0, Endianess endianness = Endianess.LittleEndian,
-            uint? fpuInterruptNumber = null, uint? numberOfMPURegions = null, bool enableTrustZone = false, uint? numberOfSAURegions = null, uint? numberOfIDAURegions = null, bool isCpuWaitSignalSet = false)
+            uint? fpuInterruptNumber = null, uint? numberOfMPURegions = null, bool enableTrustZone = false, uint? numberOfSAURegions = null, uint? numberOfIDAURegions = null)
             : base(cpuType, machine, cpuId, endianness, numberOfMPURegions)
         {
             CpuWaitSignal = new GPIO();
-            CpuWaitSignal.Set(isCpuWaitSignalSet);
             CpuWaitSignal.AddStateChangedHook((state) => UpdateCPUWait(state));
-            IsHalted = CpuWaitSignal.IsSet;
 
             if(nvic == null)
             {
@@ -204,10 +202,6 @@ namespace Antmicro.Renode.Peripherals.CPU
         }
 
         public override string GetLLVMTriple(uint flags) => AllLLVMTriples[0];
-
-        public uint? InitVectorTableOffsetNonSecure { get; set; } = null;
-
-        public uint? InitVectorTableOffset { get; set; } = null;
 
         public GPIO CpuWaitSignal { get; }
 
@@ -866,7 +860,6 @@ namespace Antmicro.Renode.Peripherals.CPU
         {
             if(EmulationState == EmulationCPUState.Running)
             {
-                TryInitVTOR();
                 InitPCAndSP();
             }
             base.OnLeavingResetState();
@@ -978,18 +971,6 @@ namespace Antmicro.Renode.Peripherals.CPU
                 return 0x0;
             }
             return getter();
-        }
-
-        private void TryInitVTOR()
-        {
-            if(InitVectorTableOffset != null)
-            {
-                VectorTableOffset = InitVectorTableOffset.Value;
-            }
-            if(InitVectorTableOffsetNonSecure != null)
-            {
-                VectorTableOffsetNonSecure = InitVectorTableOffsetNonSecure.Value;
-            }
         }
 
         private void InitPCAndSP()

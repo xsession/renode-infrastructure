@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2010-2026 Antmicro
+// Copyright (c) 2010-2024 Antmicro
 //
 // This file is licensed under the MIT License.
 // Full license text is available in 'licenses/MIT.txt'.
@@ -12,8 +12,7 @@ namespace Antmicro.Renode.Peripherals.Analog
 {
     public class STM32F3_ADC : STM32_ADC_Common
     {
-        public STM32F3_ADC(IMachine machine, double referenceVoltage, uint externalEventFrequency,
-                           int dmaChannel = 0, IDMA dmaPeripheral = null, bool dualMode = false)
+        public STM32F3_ADC(IMachine machine, double referenceVoltage, uint externalEventFrequency, int dmaChannel = 0, IDMA dmaPeripheral = null)
             : base(
                 machine,
                 referenceVoltage,
@@ -28,11 +27,7 @@ namespace Antmicro.Renode.Peripherals.Analog
                 hasVbatPin: false,
                 hasChannelSelect: false,
                 hasChannelSequence: true,
-                hasPowerRegister: true,
-                hasOffset: true,
-                hasDifferentialMode: true,
-                samplingTime: SamplingTime.PerChannel,
-                dualMode: dualMode
+                hasPowerRegister: true
             )
         { }
     }

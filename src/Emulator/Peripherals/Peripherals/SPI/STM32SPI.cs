@@ -5,12 +5,9 @@
 // This file is licensed under the MIT License.
 // Full license text is available in 'licenses/MIT.txt'.
 //
-using System.Collections.Generic;
-
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure;
 using Antmicro.Renode.Core.Structure.Registers;
-using Antmicro.Renode.Exceptions;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
 using Antmicro.Renode.Utilities.Collections;
@@ -19,24 +16,8 @@ namespace Antmicro.Renode.Peripherals.SPI
 {
     public sealed class STM32SPI : NullRegistrationPointPeripheralContainer<ISPIPeripheral>, IWordPeripheral, IDoubleWordPeripheral, IBytePeripheral, IKnownSize
     {
-        public STM32SPI(IMachine machine, STM32Series series, int bufferCapacity = DefaultBufferCapacity) : base(machine)
+        public STM32SPI(IMachine machine, int bufferCapacity = DefaultBufferCapacity) : base(machine)
         {
-            var supportedSeries = new List<STM32Series>{
-                STM32Series.F0,
-                STM32Series.F1,
-                STM32Series.F4,
-                STM32Series.F7,
-                STM32Series.G0,
-                STM32Series.L0,
-                STM32Series.L1,
-                STM32Series.L5,
-            };
-            if(!supportedSeries.Contains(series))
-            {
-                throw new ConstructionException($"Unsupported STM32 series value: {series}!");
-            }
-            this.series = series;
-
             receiveBuffer = new CircularBuffer<byte>(bufferCapacity);
             IRQ = new GPIO();
             DMARecieve = new GPIO();
@@ -144,15 +125,7 @@ namespace Antmicro.Renode.Peripherals.SPI
                     return;
                 }
                 var response = peripheral.Transmit((byte)value); // currently byte mode is the only one we support
-                if(receiveBuffer.Count == receiveBuffer.Capacity)
-                {
-                    this.Log(LogLevel.Debug, "Receiving response while RXFIFO is full, dropping it");
-                    overrun.Value = true;
-                }
-                else
-                {
-                    receiveBuffer.Enqueue(response);
-                }
+                receiveBuffer.Enqueue(response);
                 if(rxDmaEnable.Value)
                 {
                     // This blink is used to signal the DMA that it should perform the peripheral -> memory transaction now
@@ -167,23 +140,10 @@ namespace Antmicro.Renode.Peripherals.SPI
 
         private void Update()
         {
-            var rxBufferNotEmptyInterruptFlag = IsRxBufferNotEmpty() && rxBufferNotEmptyInterruptEnable.Value;
+            var rxBufferNotEmpty = receiveBuffer.Count != 0;
+            var rxBufferNotEmptyInterruptFlag = rxBufferNotEmpty && rxBufferNotEmptyInterruptEnable.Value;
 
-            // Consider only the OVR event flag as the MODF (Master Mode fault event), FRE (TI frame
-            // format error) and CRCERR (CRC protocol error) are not supported by this model.
-            var errorInterrupt = errorInterruptEnable.Value && overrun.Value;
-
-            IRQ.Set(txBufferEmptyInterruptEnable.Value || rxBufferNotEmptyInterruptFlag || errorInterrupt);
-        }
-
-        private bool IsRxBufferNotEmpty()
-        {
-            if(series == STM32Series.L5 && !fifoReceptionThreshold.Value)
-            {
-                return receiveBuffer.Count >= 2;
-            }
-
-            return receiveBuffer.Count != 0;
+            IRQ.Set(txBufferEmptyInterruptEnable.Value || rxBufferNotEmptyInterruptFlag);
         }
 
         private void SetupRegisters()
@@ -195,11 +155,11 @@ namespace Antmicro.Renode.Peripherals.SPI
             Registers.Control1.Define(registers)
                 .WithFlag(0, name: "CPHA") // Physical
                 .WithFlag(1, name: "CPOL") // Physical
-                .WithFlag(2, out masterMode, writeCallback: (old_value, value) =>
+                .WithFlag(2, writeCallback: (_, value) =>
                 {
-                    if(!value && old_value)
+                    if(!value)
                     {
-                        this.Log(LogLevel.Error, "Setting slave mode which is not supported.");
+                        this.Log(LogLevel.Warning, "Slave mode is not supported");
                     }
                 }, name: "MSTR")
                 .WithValueField(3, 3, name: "Baud") // Physical
@@ -208,10 +168,6 @@ namespace Antmicro.Renode.Peripherals.SPI
                     if(!newValue)
                     {
                         IRQ.Unset();
-                    }
-                    else if(!masterMode.Value)
-                    {
-                        this.Log(LogLevel.Error, "Enabled SPI in slave mode, which is not supported.");
                     }
                 }, name: "SpiEnable")
                 .WithFlag(7, name: "LSBFIRST") // Physical
@@ -227,58 +183,24 @@ namespace Antmicro.Renode.Peripherals.SPI
 
             Registers.Control2.Define(registers)
                 .WithFlag(0, out rxDmaEnable, name: "RXDMAEN")
-                .If(series == STM32Series.L5)
-                    .Then(reg => reg
-                            // Firmware may read/write this value. There is no special logic for TX DMA as transfers are handled by STM32LDMA model
-                            .WithFlag(1, name: "TXDMAEN")
-                    )
-                    .Else(reg => reg
-                            .WithTaggedFlag("TXDMAEN", 1)
-                    )
+                .WithTaggedFlag("TXDMAEN", 1)
                 .WithTaggedFlag("SSOE", 2)
-                .If(series == STM32Series.L5)
-                    .Then(reg => reg
-                          .WithFlag(3, name: "NSSP") // Physical
-                    )
-                    .Else(reg => reg
-                          .WithReservedBits(3, 1)
-                    )
+                .WithReservedBits(3, 1)
                 .WithTaggedFlag("FRF", 4)
-                .WithFlag(5, out errorInterruptEnable, name: "ERRIE")
+                .WithTaggedFlag("ERRIE", 5)
                 .WithFlag(6, out rxBufferNotEmptyInterruptEnable, name: "RXNEIE")
                 .WithFlag(7, out txBufferEmptyInterruptEnable, name: "TXEIE")
-                .If(series == STM32Series.L5)
-                    .Then(reg => reg
-                          .WithValueField(8, 4, writeCallback: (_, dataSizeBits) =>
-                          {
-                              if(dataSizeBits > 0b111)
-                              {
-                                  this.Log(LogLevel.Warning, "Data size > 8 bits not supported");
-                              }
-                          }, name: "DS")
-                          .WithFlag(12, out fifoReceptionThreshold, name: "FRXTH")
-                    )
-                    .Else(reg => reg
-                          .WithReservedBits(8, 4)
-                          .WithReservedBits(12, 1)
-                    )
-                .WithReservedBits(13, 19)
+                .WithReservedBits(8, 24)
                 .WithWriteCallback((_, __) => Update());
 
             Registers.Status.Define(registers, 2)
-                .WithFlag(0, FieldMode.Read, valueProviderCallback: _ => IsRxBufferNotEmpty(), name: "RXNE")
+                .WithFlag(0, FieldMode.Read, valueProviderCallback: _ => receiveBuffer.Count != 0, name: "RXNE")
                 .WithFlag(1, FieldMode.Read, valueProviderCallback: _ => true, name: "TXE") // transfers are instant
                 .WithTaggedFlag("CHSIDE", 2) // r/o
                 .WithTaggedFlag("UDR", 3) // r/o
                 .WithTaggedFlag("CRCERR", 4) // rc_w0
                 .WithTaggedFlag("MODF", 5) // r/o
-                .WithFlag(6, out overrun, FieldMode.Read, readCallback: (_, __) =>
-                {
-                    if(receiveBuffer.Count < receiveBuffer.Capacity)
-                    {
-                        overrun.Value = false;
-                    }
-                }, name: "OVR")
+                .WithTaggedFlag("OVR", 6) // r/o
                 .WithTaggedFlag("BSY", 7) // r/o
                 .WithTaggedFlag("FRE", 8) // r/o
                 .WithReservedBits(9, 23);
@@ -327,17 +249,10 @@ namespace Antmicro.Renode.Peripherals.SPI
         }
 
         private IFlagRegisterField txBufferEmptyInterruptEnable, rxBufferNotEmptyInterruptEnable, rxDmaEnable;
-        private IFlagRegisterField masterMode;
-        private IFlagRegisterField overrun;
-        private IFlagRegisterField errorInterruptEnable;
-        //STM32L5 specific flags
-        private IFlagRegisterField fifoReceptionThreshold;
 
         private readonly DoubleWordRegisterCollection registers;
 
         private readonly CircularBuffer<byte> receiveBuffer;
-
-        private readonly STM32Series series;
 
         private const int DefaultBufferCapacity = 4;
 
