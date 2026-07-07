@@ -10,10 +10,9 @@ using Antmicro.Renode.Peripherals.DMA;
 
 namespace Antmicro.Renode.Peripherals.Analog
 {
-    public class STM32F3_ADC : STM32_ADC_Common
+    public class STM32L5_ADC : STM32_ADC_Common
     {
-        public STM32F3_ADC(IMachine machine, double referenceVoltage, uint externalEventFrequency,
-                           int dmaChannel = 0, IDMA dmaPeripheral = null, bool dualMode = false)
+        public STM32L5_ADC(IMachine machine, double referenceVoltage, uint externalEventFrequency, int dmaChannel = 0, IDMA dmaPeripheral = null)
             : base(
                 machine,
                 referenceVoltage,
@@ -22,17 +21,17 @@ namespace Antmicro.Renode.Peripherals.Analog
                 dmaPeripheral,
                 // Base class configuration
                 watchdogCount: 3,
-                hasCalibration: true,
+                hasCalibration: false,
                 channelCount: 19,
                 hasPrescaler: true,
                 hasVbatPin: false,
                 hasChannelSelect: false,
                 hasChannelSequence: true,
-                hasPowerRegister: true,
+                hasPowerRegister: false,
                 hasOffset: true,
                 hasDifferentialMode: true,
                 samplingTime: SamplingTime.PerChannel,
-                dualMode: dualMode
+                dualMode: true
             )
         { }
     }

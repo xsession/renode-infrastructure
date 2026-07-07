@@ -1043,7 +1043,7 @@
     <Compile Include="Emulator/Peripherals/Peripherals/I2C/MPFS_I2C.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/USB/USBMouse.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/USB/USBHost.cs" />
-    <Compile Include="Emulator/Peripherals/Peripherals/Miscellaneous/STM32F4_RNG.cs" />
+    <Compile Include="Emulator/Peripherals/Peripherals/Miscellaneous/STM32_RNG.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/UART/Murax_UART.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/Timers/Murax_Timer.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/GPIOPort/Murax_GPIO.cs" />
@@ -1428,6 +1428,7 @@
     <Compile Include="Emulator/Peripherals/Peripherals/Video/Allegro_E310.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/CPU/Assembler/LLVMAssembler.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/Analog/STM32F3_ADC.cs" />
+    <Compile Include="Emulator/Peripherals/Peripherals/Analog/STM32L5_ADC.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/CPU/MSP430X/MSP430X.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/Timers/SAMD21_Timer.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/Timers/SAMD21_RTC.cs" />
@@ -2127,6 +2128,7 @@
     <Compile Include="Emulator/Extensions/UserInterface/Tokenizer/TimeIntervalToken.cs" />
     <Compile Include="Emulator/Extensions/UserInterface/DeviceHelper.cs" />
     <Compile Include="Emulator/Extensions/UserInterface/Commands/SetAndRevertAfterCommand.cs" />
+    <Compile Include="Emulator/Peripherals/Peripherals/CAN/STM32_FDCAN.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Emulator/Main/Peripherals/Bus/SystemBusGenerated.tt">

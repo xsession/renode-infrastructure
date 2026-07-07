@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2010-2023 Antmicro
+// Copyright (c) 2010-2026 Antmicro
 // Copyright (c) 2011-2015 Realtime Embedded
 //
 // This file is licensed under the MIT License.
@@ -14,12 +14,12 @@ using Antmicro.Renode.Peripherals.Bus;
 
 namespace Antmicro.Renode.Peripherals.DMA
 {
-    public sealed class STM32LDMA : IDoubleWordPeripheral, IKnownSize, INumberedGPIOOutput
+    public sealed class STM32LDMA : IDoubleWordPeripheral, IKnownSize, INumberedGPIOOutput, IDMA, IGPIOReceiver
     {
         public STM32LDMA(IMachine machine)
         {
             engine = new DmaEngine(machine.GetSystemBus(this));
-            channels = new Channel[8];
+            channels = new Channel[this.NumberOfChannels];
             for(var i = 0; i < channels.Length; i++)
             {
                 channels[i] = new Channel(this, i);
@@ -28,7 +28,20 @@ namespace Antmicro.Renode.Peripherals.DMA
 
         public void Reset()
         {
-            // TODO
+            for(var i = 0; i < channels.Length; i++)
+            {
+                channels[i].Reset();
+            }
+        }
+
+        public void OnGPIO(int number, bool value)
+        {
+            if(number < 0 || number >= channels.Length)
+            {
+                this.WarningLog("Attempted to signal DMA channel {0}. Maximum value is {1}", number, channels.Length - 1);
+                return;
+            }
+            channels[number].OnGPIO(value);
         }
 
         public uint ReadDoubleWord(long offset)
@@ -65,6 +78,18 @@ namespace Antmicro.Renode.Peripherals.DMA
             }
         }
 
+        public void RequestTransfer(int channel)
+        {
+            if(channel > 0 && channel <= channels.Length)
+            {
+                channels[channel - 1].DoTransfer();
+            }
+            else
+            {
+                this.Log(LogLevel.Warning, "Invalid channel {0}, no transfer performed.");
+            }
+        }
+
         public IReadOnlyDictionary<int, IGPIO> Connections { get { var i = 0; return channels.ToDictionary(x => i++, y => (IGPIO)y.IRQ); } }
 
         public long Size
@@ -74,6 +99,8 @@ namespace Antmicro.Renode.Peripherals.DMA
                 return 0x400;
             }
         }
+
+        public int NumberOfChannels { get => 8; }
 
         private uint HandleInterruptStatusRead()
         {
@@ -171,43 +198,11 @@ namespace Antmicro.Renode.Peripherals.DMA
                 numberOfData = 0;
                 priority = 0;
                 direction = 0;
+                circularMode = false;
+                halfTransferInterrupt = false;
             }
 
-            public GPIO IRQ { get; private set; }
-
-            private uint HandleConfigurationRead()
-            {
-                var returnValue = 0u;
-                returnValue |= completeInterruptEnabled ? (1u << 1) : 0u;
-                returnValue |= transferErrorInterruptEnabled ? (1u << 3) : 0u;
-                returnValue |= ((uint)direction) << 4;
-                returnValue |= peripheralIncrement ? (1u << 6) : 0u;
-                returnValue |= memoryIncrement ? (1u << 7) : 0u;
-                returnValue |= (uint)(priority << 12);
-                return returnValue;
-            }
-
-            private void HandleConfigurationWrite(uint value)
-            {
-                completeInterruptEnabled = (value & (1 << 1)) != 0;
-                transferErrorInterruptEnabled = (value & (1 << 3)) != 0;
-                direction = (Direction)((value >> 4) & 1);
-                peripheralIncrement = (value & (1 << 6)) != 0;
-                memoryIncrement = (value & (1 << 7)) != 0;
-                priority = (byte)((value >> 12) & 3);
-
-                if((value & ~0x30DB) != 0)
-                {
-                    parent.Log(LogLevel.Warning, "Channel {0}: some unhandled bits were written to configuration register. Value is 0x{1:X}.", channelNo, value);
-                }
-
-                if((value & 1) != 0)
-                {
-                    DoTransfer();
-                }
-            }
-
-            private void DoTransfer()
+            public void DoTransfer()
             {
                 uint sourceAddress, destinationAddress;
                 bool incrementSourceAddress, incrementDestinationAddress;
@@ -232,10 +227,96 @@ namespace Antmicro.Renode.Peripherals.DMA
                     destinationTransferType = memoryTransferType;
                 }
 
-                var request = new Request(sourceAddress, destinationAddress, numberOfData, sourceTransferType, destinationTransferType,
+                var request = new Request(sourceAddress, destinationAddress, numberOfData * (int)sourceTransferType, sourceTransferType, destinationTransferType,
                                   incrementSourceAddress, incrementDestinationAddress);
                 parent.engine.IssueCopy(request);
-                IRQ.Set();
+                if(completeInterruptEnabled)
+                {
+                    IRQ.Set();
+                }
+            }
+
+            public void OnGPIO(bool value)
+            {
+                if(!value)
+                {
+                    return;
+                }
+
+                DoTransfer();
+            }
+
+            public GPIO IRQ { get; private set; }
+
+            private uint HandleConfigurationRead()
+            {
+                var returnValue = 0u;
+                returnValue |= completeInterruptEnabled ? (1u << 1) : 0u;
+                returnValue |= halfTransferInterrupt ? (1u << 2) : 0u;
+                returnValue |= transferErrorInterruptEnabled ? (1u << 3) : 0u;
+                returnValue |= ((uint)direction) << 4;
+                returnValue |= circularMode ? (1u << 5) : 0u;
+                returnValue |= peripheralIncrement ? (1u << 6) : 0u;
+                returnValue |= memoryIncrement ? (1u << 7) : 0u;
+                returnValue |= ((uint)peripheralTransferType >> 1) << 8;
+                returnValue |= ((uint)memoryTransferType >> 1) << 10;
+                returnValue |= (uint)(priority << 12);
+                return returnValue;
+            }
+
+            private void HandleConfigurationWrite(uint value)
+            {
+                bool previousHalfTransferInterrupt = halfTransferInterrupt;
+
+                completeInterruptEnabled = (value & (1 << 1)) != 0;
+                halfTransferInterrupt = (value & (1 << 2)) != 0;
+                transferErrorInterruptEnabled = (value & (1 << 3)) != 0;
+                direction = (Direction)((value >> 4) & 1);
+                circularMode = (value & (1 << 5)) != 0;
+                peripheralIncrement = (value & (1 << 6)) != 0;
+                memoryIncrement = (value & (1 << 7)) != 0;
+                HandleConfigureWriteSizes(value);
+                priority = (byte)((value >> 12) & 3);
+
+                if((value & ~0x3FFF) != 0)
+                {
+                    parent.Log(LogLevel.Warning, "Channel {0}: some unhandled bits were written to configuration register. Value is 0x{1:X}.", channelNo, value);
+                }
+                if(halfTransferInterrupt && !previousHalfTransferInterrupt)
+                {
+                    parent.Log(LogLevel.Warning, "Channel {0}: half transfer interrupt not supported.", channelNo);
+                }
+
+                if((value & 1) != 0)
+                {
+                    DoTransfer();
+                }
+            }
+
+            private void HandleConfigureWriteSizes(uint value)
+            {
+                if((value & 1) == 0) // MSIZE and PSIZE are read-only if EN=1
+                {
+                    int size = 0;
+                    if(DecodeConfigurationSize(value, 8, out size))
+                    {
+                        peripheralTransferType = (TransferType)(1 << size);
+                    }
+                    if(DecodeConfigurationSize(value, 10, out size))
+                    {
+                        memoryTransferType = (TransferType)(1 << size);
+                    }
+                }
+            }
+
+            private bool DecodeConfigurationSize(uint value, int offset, out int size)
+            {
+                size = (int)(value >> offset) & 3;
+                if(size == 3)
+                {
+                    parent.Log(LogLevel.Warning, "Channel {0}: Invalid reserved value for size", channelNo);
+                }
+                return size < 3;
             }
 
             private Direction direction;
@@ -247,6 +328,8 @@ namespace Antmicro.Renode.Peripherals.DMA
             private uint memoryAddress;
             private uint peripheralAddress;
             private bool peripheralIncrement;
+            private bool circularMode;
+            private bool halfTransferInterrupt;
 
             private bool memoryIncrement;
             private TransferType peripheralTransferType;
