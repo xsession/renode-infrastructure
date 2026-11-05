@@ -108,6 +108,16 @@ namespace Antmicro.Renode.Peripherals.PIC12
 
         public void Reset()
         {
+            // WDT (or MCLR) reset: RAM and SFRs are RETAINED, only PCON
+            // changes (POR/PORTE/BOR/VREGD stay set, WDT bit cleared) —
+            // DS41190 Table 29-1. Flagged by the PIC12 core before the
+            // machine reset.
+            if(nextResetIsWdt)
+            {
+                nextResetIsWdt = false;
+                pcon = 0xF8;
+                return;
+            }
             Array.Clear(gpr, 0, gpr.Length);
             indf = 0;
             tmr0 = 0;
@@ -126,6 +136,15 @@ namespace Antmicro.Renode.Peripherals.PIC12
             gpioLatch = 0;
         }
 
+        /// <summary>
+        /// Mark the next machine reset as a watchdog reset so that
+        /// <see cref="Reset"/> retains data memory (hardware behavior).
+        /// </summary>
+        public void MarkWdtResetComing()
+        {
+            nextResetIsWdt = true;
+        }
+
         public long Size => 0xA0;
 
         private static bool IsGpr(long offset)
@@ -137,6 +156,7 @@ namespace Antmicro.Renode.Peripherals.PIC12
 
         private readonly IMachine machine;
         private readonly byte[] gpr;
+        private bool nextResetIsWdt;
 
         private byte indf;
         private byte tmr0;

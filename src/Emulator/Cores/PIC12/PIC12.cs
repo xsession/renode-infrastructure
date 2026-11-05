@@ -38,9 +38,23 @@ namespace Antmicro.Renode.Peripherals.CPU
                                  enabled: true,
                                  eventEnabled: true);
             wdt.LimitReached += OnWdtLimitReached;
+
+            Trace = new Pic12Trace(this, machine);
+            machine.MachineReset += Trace.OnMachineReset;
         }
 
         public ulong WdtResetCount { get; private set; }
+
+        /// <summary>
+        /// Built-in signal capture / statistics / time-plot engine
+        /// (see Pic12Trace.cs). Drive it from a script:
+        /// core.Trace.Start(...); emulation RunFor "..."; core.Trace.Stop();
+        /// core.Trace.WriteCsv("out"); core.Trace.WritePng("out/viz.png");
+        /// </summary>
+        public Pic12Trace Trace { get; }
+
+        /// <summary>Watchdog age in ms since the last feed/reset (0..wdtPeriodMs).</summary>
+        public ulong WdtAgeMs => wdtPeriodMs - wdt.Value;
 
         public override void Reset()
         {
@@ -57,6 +71,9 @@ namespace Antmicro.Renode.Peripherals.CPU
         private void OnWdtLimitReached()
         {
             WdtResetCount++;
+            // Model the upcoming machine reset as a WDT reset, not a POR:
+            // RAM/SFRs are retained and PCON = 0xF8 (DS41190 Table 29-1).
+            Trace.PrepareWdtReset();
             this.Log(LogLevel.Info,
                 "Watchdog timer timeout #{0} (period {1} ms) - resetting machine",
                 WdtResetCount, wdtPeriodMs);
