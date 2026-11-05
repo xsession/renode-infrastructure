@@ -436,6 +436,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Emulator/Cores/PIC12/PIC12.cs" />
     <Compile Include="Emulator/Cores/PIC16/PIC16.cs" />
     <Compile Include="Emulator/Cores/PIC16/PIC16Registers.cs">
       <DependentUpon>PIC16Registers.tt</DependentUpon>
@@ -764,6 +765,7 @@
     <Compile Include="Emulator/Peripherals/Peripherals/Miscellaneous/MPFS_DDRMock.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/Miscellaneous/ResetPin.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/Memory/ArrayMemoryWithReadonlys.cs" />
+    <Compile Include="Emulator/Peripherals/Peripherals/PIC12/PIC12_DataSpace.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/Miscellaneous/EmulatorController.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/Miscellaneous/S32K_SCG.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/IRQControllers/NXP_INTMUX.cs" />

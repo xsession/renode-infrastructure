@@ -93,6 +93,14 @@ namespace Antmicro.Renode.Peripherals.CPU
             this.NoisyLog("PIC16: CPU entered SLEEP");
         }
 
+        [Export]
+        private void WdtClrwdt()
+        {
+            /* No WDT model in the generic PIC16 core; the tlib CLRWDT
+             * callback is still bound so the shared pic16 backend
+             * never calls an unattached function pointer. */
+        }
+
 #pragma warning disable 649
         [Import]
         private readonly Action<uint> TlibSetEntryPoint;
