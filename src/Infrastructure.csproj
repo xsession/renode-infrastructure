@@ -437,6 +437,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Emulator/Cores/PIC12/PIC12.cs" />
+    <Compile Include="Emulator/Cores/PIC12/Pic12Trace.cs" />
     <Compile Include="Emulator/Cores/PIC16/PIC16.cs" />
     <Compile Include="Emulator/Cores/PIC16/PIC16Registers.cs">
       <DependentUpon>PIC16Registers.tt</DependentUpon>
@@ -1008,7 +1009,6 @@
     <Compile Include="Emulator/Peripherals/Peripherals/UART/LiteX_UART.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/UART/LiteX_UART_64bit.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/Network/LiteX_Ethernet.cs" />
-    <Compile Include="Emulator/Peripherals/Peripherals/UART/PicoSoC_SimpleUART.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/Timers/RenesasRA_GPT.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/Timers/RenesasDA14_GPT.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/Timers/RenesasRZG_GPT.cs" />
@@ -1062,7 +1062,6 @@
     <Compile Include="Emulator/Peripherals/Peripherals/USB/ValentyUSB.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/I2C/LiteX_I2C.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/I2C/LiteX_I2C_Zephyr.cs" />
-    <Compile Include="Emulator/Peripherals/Peripherals/SPI/PicoRV_SPI.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/Video/LiteX_Framebuffer.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/USB/USBKeyboard.cs" />
     <Compile Include="Emulator/Peripherals/Peripherals/Wireless/IEEE802_15_4/PHYHeader802154.cs" />

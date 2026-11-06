@@ -37,6 +37,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Drawing;
 
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Logging;
@@ -153,7 +154,7 @@ namespace Antmicro.Renode.Peripherals.CPU
                 GPIO = dataSpace != null ? dataSpace.ReadByte(0x05) : (byte)0,
                 GPR0x08 = dataSpace != null ? dataSpace.ReadByte(0x08) : (byte)0,
                 PCON = dataSpace != null ? dataSpace.ReadByte(0x8E) : (byte)0,
-                WdtAgeMs = cpu.WdtAgeMs,
+                WdtAgeMs = (uint)cpu.WdtAgeMs,
             };
         }
 
@@ -265,26 +266,39 @@ namespace Antmicro.Renode.Peripherals.CPU
         // 14-bit classic mid-range disassembler (DS41190G opcode table,
         // same table verified in FW-22-43-00_RE/tools/pic12f629_disasm.py)
         // ------------------------------------------------------------------
-        private static readonly (uint Mask, uint Op, string Mn)[] Opcodes =
+        private struct OpDef
         {
-            (0x3F80, 0x0080, "MOVWF"), (0x3F80, 0x0180, "CLRF"),
-            (0x3F00, 0x0800, "MOVF"), (0x3F00, 0x0300, "DECF"),
-            (0x3F00, 0x0A00, "INCF"), (0x3F00, 0x0700, "ADDWF"),
-            (0x3F00, 0x0200, "SUBWF"), (0x3F00, 0x0500, "ANDWF"),
-            (0x3F00, 0x0400, "IORWF"), (0x3F00, 0x0600, "XORWF"),
-            (0x3F00, 0x0900, "COMF"), (0x3F00, 0x0E00, "SWAPF"),
-            (0x3F00, 0x0C00, "RRF"), (0x3F00, 0x0D00, "RLF"),
-            (0x3F00, 0x0B00, "DECFSZ"), (0x3F00, 0x0F00, "INCFSZ"),
-            (0x3F00, 0x3000, "MOVLW"), (0x3F00, 0x3400, "RETLW"),
-            (0x3F00, 0x3900, "ANDLW"), (0x3F00, 0x3800, "IORLW"),
-            (0x3F00, 0x3A00, "XORLW"), (0x3F00, 0x3E00, "ADDLW"),
-            (0x3F00, 0x3C00, "SUBLW"),
-            (0x3C00, 0x1400, "BSF"), (0x3C00, 0x1000, "BCF"),
-            (0x3C00, 0x1800, "BTFSC"), (0x3C00, 0x1C00, "BTFSS"),
-            (0x3800, 0x2800, "GOTO"), (0x3800, 0x2000, "CALL"),
-            (0xFFFF, 0x0008, "RETURN"), (0xFFFF, 0x0009, "RETFIE"),
-            (0xFFFF, 0x0064, "CLRWDT"), (0xFFFF, 0x0063, "SLEEP"),
-            (0xFFFF, 0x0000, "NOP"),
+            public readonly uint Mask;
+            public readonly uint Op;
+            public readonly string Mn;
+            public OpDef(uint mask, uint op, string mn)
+            {
+                Mask = mask;
+                Op = op;
+                Mn = mn;
+            }
+        }
+
+        private static readonly OpDef[] Opcodes =
+        {
+            new OpDef(0x3F80, 0x0080, "MOVWF"), new OpDef(0x3F80, 0x0180, "CLRF"),
+            new OpDef(0x3F00, 0x0800, "MOVF"), new OpDef(0x3F00, 0x0300, "DECF"),
+            new OpDef(0x3F00, 0x0A00, "INCF"), new OpDef(0x3F00, 0x0700, "ADDWF"),
+            new OpDef(0x3F00, 0x0200, "SUBWF"), new OpDef(0x3F00, 0x0500, "ANDWF"),
+            new OpDef(0x3F00, 0x0400, "IORWF"), new OpDef(0x3F00, 0x0600, "XORWF"),
+            new OpDef(0x3F00, 0x0900, "COMF"), new OpDef(0x3F00, 0x0E00, "SWAPF"),
+            new OpDef(0x3F00, 0x0C00, "RRF"), new OpDef(0x3F00, 0x0D00, "RLF"),
+            new OpDef(0x3F00, 0x0B00, "DECFSZ"), new OpDef(0x3F00, 0x0F00, "INCFSZ"),
+            new OpDef(0x3F00, 0x3000, "MOVLW"), new OpDef(0x3F00, 0x3400, "RETLW"),
+            new OpDef(0x3F00, 0x3900, "ANDLW"), new OpDef(0x3F00, 0x3800, "IORLW"),
+            new OpDef(0x3F00, 0x3A00, "XORLW"), new OpDef(0x3F00, 0x3E00, "ADDLW"),
+            new OpDef(0x3F00, 0x3C00, "SUBLW"),
+            new OpDef(0x3C00, 0x1400, "BSF"), new OpDef(0x3C00, 0x1000, "BCF"),
+            new OpDef(0x3C00, 0x1800, "BTFSC"), new OpDef(0x3C00, 0x1C00, "BTFSS"),
+            new OpDef(0x3800, 0x2800, "GOTO"), new OpDef(0x3800, 0x2000, "CALL"),
+            new OpDef(0xFFFF, 0x0008, "RETURN"), new OpDef(0xFFFF, 0x0009, "RETFIE"),
+            new OpDef(0xFFFF, 0x0064, "CLRWDT"), new OpDef(0xFFFF, 0x0063, "SLEEP"),
+            new OpDef(0xFFFF, 0x0000, "NOP"),
         };
 
         private static readonly Dictionary<int, string> FregNames = new Dictionary<int, string>
@@ -338,7 +352,7 @@ namespace Antmicro.Renode.Peripherals.CPU
                         || entry.Op == 0x0400 || entry.Op == 0x0600 || entry.Op == 0x0900
                         || entry.Op == 0x0E00 || entry.Op == 0x0C00 || entry.Op == 0x0D00)
                     {
-                        return mn + " " + FregName(f7) + ", " + (w & 0x80 != 0 ? "f" : "w");
+                        return mn + " " + FregName(f7) + ", " + ((w & 0x80) != 0 ? "f" : "w");
                     }
                     return mn + " 0x" + (w & 0xFF).ToString("X2");
                 }
@@ -579,7 +593,7 @@ namespace Antmicro.Renode.Peripherals.CPU
                         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None;
                         g.Clear(System.Drawing.Color.White);
                         Render(g, bmp);
-                        g.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+                        bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
                     }
                 }
                 cpu.Log(LogLevel.Info, "Pic12Trace: wrote {0}", path);
@@ -616,9 +630,9 @@ namespace Antmicro.Renode.Peripherals.CPU
                                        stats.WdtPeriodUs / 1000.0, stats.WindowUs / 1e6, stats.WdtResets),
                          fAxis, new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(0x55, 0x55, 0x55)), 40, 48);
 
-            var panel = (RectangleF area, string title, string xLabel, string yLabel,
-                         double xMin, double xMax, double yMin, double yMax,
-                         int xTicks, int yTicks) =>
+            void panel(RectangleF area, string title, string xLabel, string yLabel,
+                       double xMin, double xMax, double yMin, double yMax,
+                       int xTicks, int yTicks)
             {
                 using(var pen = new System.Drawing.Pen(System.Drawing.Color.FromArgb(0x57, 0x60, 0x6A)))
                 {
@@ -640,14 +654,14 @@ namespace Antmicro.Renode.Peripherals.CPU
                         g.DrawLine(gridPen, area.X, y, area.X + area.Width, y);
                     }
                 }
-            };
+            }
 
             RectangleF Map(RectangleF area, double x, double y,
                            double xMin, double xMax, double yMin, double yMax)
             {
                 var px = area.X + area.Width * (x - xMin) / (xMax - xMin);
                 var py = area.Y + area.Height * (1.0 - (y - yMin) / (yMax - yMin));
-                return new RectangleF(px, py, 0, 0);
+                return new RectangleF((float)px, (float)py, 0, 0);
             }
 
             void DrawStep(IEnumerable<Pic12TraceSample> samples, RectangleF area,
@@ -660,24 +674,26 @@ namespace Antmicro.Renode.Peripherals.CPU
                 {
                     for(int i = 0; i + 1 < points.Count; i++)
                     {
-                        var a = points[i], b = points[i + 1];
-                        var p1 = Map(area, a.TUs, value(a), xMin, xMax, yMin, yMax);
-                        var p2 = Map(area, b.TUs, value(b), xMin, xMax, yMin, yMax);
-                        g.DrawLine(pen, p1.X, p1.Y, p2.X, p1.Y);
-                        g.DrawLine(pen, p2.X, p1.Y, p2.X, p2.Y);
+                        var a = points[i];
+                        var b = points[i + 1];
+                        var qa = Map(area, a.TUs, value(a), xMin, xMax, yMin, yMax);
+                        var qb = Map(area, b.TUs, value(b), xMin, xMax, yMin, yMax);
+                        g.DrawLine(pen, qa.X, qa.Y, qb.X, qa.Y);
+                        g.DrawLine(pen, qb.X, qa.Y, qb.X, qb.Y);
                     }
                     if(fill && points.Count > 1)
                     {
                         var first = Map(area, points[0].TUs, 0, xMin, xMax, yMin, yMax);
-                        var last = Map(area, points[^1].TUs, 0, xMin, xMax, yMin, yMax);
+                        var last = Map(area, points[points.Count - 1].TUs, 0, xMin, xMax, yMin, yMax);
                         var fillPoints = new List<System.Drawing.PointF>();
                         for(int i = 0; i < points.Count; i++)
                         {
-                            var a = points[i], b = i + 1 < points.Count ? points[i + 1] : a;
-                            fillPoints.Add(Map(area, a.TUs, value(a), xMin, xMax, yMin, yMax));
-                            fillPoints.Add(new System.Drawing.PointF(
-                                Map(area, b.TUs, value(a), xMin, xMax, yMin, yMax).X,
-                                Map(area, b.TUs, value(a), xMin, xMax, yMin, yMax).Y));
+                            var a = points[i];
+                            var b = i + 1 < points.Count ? points[i + 1] : a;
+                            var pa = Map(area, a.TUs, value(a), xMin, xMax, yMin, yMax);
+                            fillPoints.Add(new System.Drawing.PointF(pa.X, pa.Y));
+                            var pb = Map(area, b.TUs, value(a), xMin, xMax, yMin, yMax);
+                            fillPoints.Add(new System.Drawing.PointF(pb.X, pb.Y));
                         }
                         fillPoints.Add(new System.Drawing.PointF(last.X, first.Y));
                         using(var brush = new System.Drawing.SolidBrush(
@@ -703,7 +719,7 @@ namespace Antmicro.Renode.Peripherals.CPU
             foreach(var r in Resets.Where(r => r.TUs >= StartUs && r.TUs <= tEnd))
             {
                 var x = Map(p1, r.TUs, 0, StartUs, tEnd, 0, 1.1e6).X;
-                using(var pen = new System.Drawing.Pen(System.Drawing.Color.FromArgb(0x8B, 0x94, 0x9E), 1f, System.Drawing.Drawing2D.DashStyle.Dash))
+                using(var pen = new System.Drawing.Pen(System.Drawing.Color.FromArgb(0x8B, 0x94, 0x9E), 1f))
                 {
                     g.DrawLine(pen, x, p1.Y, x, p1.Y + p1.Height);
                 }
@@ -751,7 +767,7 @@ namespace Antmicro.Renode.Peripherals.CPU
             var mixItems = stats.InstructionMix.ToList();
             if(mixItems.Count > 0)
             {
-                int maxCount = mixItems.Max(kv => kv.Value);
+                int maxCount = (int)mixItems.Max(kv => kv.Value);
                 var barW = (float)(p4.Width / mixItems.Count);
                 var barColors = new[] { cPc, cW, cPurple, cGreen, cWdt, System.Drawing.Color.FromArgb(0x82, 0x50, 0xDF) };
                 for(int i = 0; i < mixItems.Count; i++)
