@@ -218,6 +218,18 @@ namespace Antmicro.Renode.Utilities
             writerTask = Task.Run(AsyncWriter);
         }
 
+        /// <summary>
+        /// Optional callback invoked when the client requests a terminal resize
+        /// (e.g. via the "term-resize" WebSocket API action). Backends that care
+        /// about terminal dimensions (PTYs) can subscribe to it.
+        /// </summary>
+        public Action<int, int> ResizeRequested;
+
+        public void TriggerResize(int width, int height)
+        {
+            ResizeRequested?.Invoke(width, height);
+        }
+
         public void Dispose()
         {
             try

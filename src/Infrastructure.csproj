@@ -1944,6 +1944,10 @@
     <Compile Include="Emulator/Main/Peripherals/Sensor/ISensor.cs" />
     <Compile Include="Emulator/Main/Peripherals/Sensor/IHumiditySensor.cs" />
     <Compile Include="Emulator/Main/Peripherals/Sensor/ITemperatureSensor.cs" />
+    <Compile Include="Emulator/Main/Peripherals/Sensor/IIlluminanceSensor.cs" />
+    <Compile Include="Emulator/Main/Utilities/WebSocketServerProvider.cs" />
+    <Compile Include="Emulator/Main/WebSockets/WebSocketsManager.cs" />
+    <Compile Include="Emulator/Extensions/Analyzers/WebSocketUartAnalyzer.cs" />
     <Compile Include="Emulator/Main/Utilities/AllowAnyNumericalValue.cs" />
     <Compile Include="Emulator/Main/Peripherals/CPU/RegisterValue.cs" />
     <Compile Include="Emulator/Main/Peripherals/Bus/SymbolAddress.cs" />
