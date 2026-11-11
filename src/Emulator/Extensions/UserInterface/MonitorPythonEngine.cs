@@ -33,19 +33,40 @@ namespace Antmicro.Renode.UserInterface
             this.monitor = monitor;
             var rootPath = Misc.GetRootDirectory();
 
-            var imports = Engine.CreateScriptSourceFromString(Aggregate(Imports));
-            imports.Execute(Scope);
-
-            var monitorPath = Path.Combine(rootPath, MonitorPyPath);
-            if(File.Exists(monitorPath))
+            // The bundled IronPython 2.7 / DLR are .NET-Framework-era and can fail
+            // on .NET Core (e.g. missing DefineDynamicModule(String,Boolean), code
+            // page encodings). Make the whole Python setup non-fatal so the Monitor
+            // and the core (C#) emulation still work; C# monitor commands (e.g. the
+            // PIC12 trace) don't depend on the Python engine.
+            try
             {
-                var script = Engine.CreateScriptSourceFromFile(monitorPath); // standard lib
-                script.Compile().Execute(Scope);
-                Logging.Logger.Log(Logging.LogLevel.Info, "Loaded monitor commands from: {0}", monitorPath);
+                var imports = Engine.CreateScriptSourceFromString(Aggregate(Imports));
+                imports.Execute(Scope);
+
+                var monitorPath = Path.Combine(rootPath, MonitorPyPath);
+                if(File.Exists(monitorPath))
+                {
+                    var script = Engine.CreateScriptSourceFromFile(monitorPath); // standard lib
+                    script.Compile().Execute(Scope);
+                    Logging.Logger.Log(Logging.LogLevel.Info, "Loaded monitor commands from: {0}", monitorPath);
+                }
+            }
+            catch (Exception e)
+            {
+                Logging.Logger.Log(Logging.LogLevel.Error,
+                    "Python monitor layer failed to initialize ({0}: {1}). Continuing without Python monitor commands.",
+                    e.GetType().Name, e.Message);
             }
 
-            Scope.SetVariable("self", monitor);
-            Scope.SetVariable("monitor", monitor);
+            try
+            {
+                Scope.SetVariable("self", monitor);
+                Scope.SetVariable("monitor", monitor);
+            }
+            catch
+            {
+                // Engine already failed - nothing to bind.
+            }
         }
 
         public void Dispose()

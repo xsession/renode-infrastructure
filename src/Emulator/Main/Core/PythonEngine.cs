@@ -26,7 +26,31 @@ namespace Antmicro.Renode.Core
     {
         #region Python Engine
 
-        private static readonly ScriptEngine _Engine = Python.CreateEngine();
+        private static readonly ScriptEngine _Engine = CreateEngineSafely();
+
+        // IronPython 2.7's PythonContext.SetStandardIO() queries the console code
+        // page while setting up its stdio (StringOps.GetEncodingName ->
+        // Encoding.IsBrowserDisplay). On some .NET versions / console code pages
+        // (e.g. 852) that throws "No data is available for encoding ...". Pre-set
+        // the runtime's standard IO to the console streams with a fully-populated
+        // in-box UTF-8 encoding so the console code page is never queried.
+        private static ScriptEngine CreateEngineSafely()
+        {
+            var runtime = Python.CreateRuntime();
+            try
+            {
+                var utf8 = System.Text.Encoding.UTF8;
+                runtime.IO.SetOutput(System.Console.OpenStandardOutput(), utf8);
+                runtime.IO.SetInput(System.Console.OpenStandardInput(), utf8);
+                runtime.IO.SetErrorOutput(System.Console.OpenStandardError(), utf8);
+            }
+            catch
+            {
+                // Best effort - if setting the IO fails, fall through to the default
+                // engine creation below.
+            }
+            return Python.GetEngine(runtime);
+        }
 
         #endregion
 
@@ -126,8 +150,20 @@ namespace Antmicro.Renode.Core
             }
             PythonTime.localtime();
 
-            var imports = Engine.CreateScriptSourceFromString(Aggregate(Imports));
-            imports.Execute(Scope);
+            try
+            {
+                var imports = Engine.CreateScriptSourceFromString(Aggregate(Imports));
+                imports.Execute(Scope);
+            }
+            catch (Exception e)
+            {
+                // On .NET Core, IronPython 2.7 can fail to wrap certain .NET types
+                // (e.g. ones referencing the .NET-Framework-internal
+                // System.Runtime.InteropServices._Type). Log a warning and continue
+                // with a partially-initialized engine so the core (C#) emulation and
+                // C# monitor commands still work.
+                System.Console.Error.WriteLine("[PythonEngine] Initial imports partially failed: " + e.Message);
+            }
         }
 
         #region Serialization
@@ -179,7 +215,12 @@ namespace Antmicro.Renode.Core
         #if NET
             "clr.AddReference('System.Console')", // It was moved to separate assembly on .NET Core.
         #else
-            "clr.AddReference('IronPython.StdLib')", // It is referenced by default on NET Core, but not on mono.
+            // This legacy project compiles without NET defined but runs on .NET Core,
+            // so add both references defensively (each is only present on one runtime).
+            "try: clr.AddReference('System.Console')",
+            "except Exception: pass",
+            "try: clr.AddReference('IronPython.StdLib')",
+            "except Exception: pass",
         #endif
             "import Antmicro.Renode",
             "import System",

@@ -194,7 +194,10 @@ namespace Antmicro.Renode.Utilities
 
         private static string GetMethodSignature(MethodInfo info)
         {
-            return info.GetParameters().Select(x => GetSimpleFullTypeName(x.ParameterType)).Aggregate((x, y) => x + "," + y);
+            var parts = info.GetParameters().Select(x => GetSimpleFullTypeName(x.ParameterType));
+            // Guard against parameterless methods: Aggregate on an empty sequence
+            // throws "Sequence contains no elements".
+            return parts.Any() ? parts.Aggregate((x, y) => x + "," + y) : string.Empty;
         }
 
         private static bool IsReferenced(Assembly referencingAssembly, string checkedAssemblyName)
@@ -231,7 +234,10 @@ namespace Antmicro.Renode.Utilities
 
         private static string GetMethodSignature(MethodDefinition definition)
         {
-            return definition.Parameters.Select(x => x.ParameterType.GetFullNameOfMember()).Aggregate((x, y) => x + "," + y);
+            var parts = definition.Parameters.Select(x => x.ParameterType.GetFullNameOfMember());
+            // Guard against parameterless methods: Aggregate on an empty sequence
+            // throws "Sequence contains no elements".
+            return parts.Any() ? parts.Aggregate((x, y) => x + "," + y) : string.Empty;
         }
 
         private static string GetSimpleFullTypeName(Type type)
